@@ -1,7 +1,15 @@
 import React from 'react'
 import {useAddress, useDisconnect, useMetamask} from "@thirdweb-dev/react"
+import { sanityClient, urlFor } from '../../sanity';
+import { GetServerSideProps } from 'next';
+import { Collection } from '../../typing';
+import Link from 'next/link';
 
-function NFTDropPage() {
+interface Props{
+  collection:Collection
+}
+
+function NFTDropPage({collection}:Props) {
   const connectWithMetamask = useMetamask();
   const address = useAddress();
   const disconnect = useDisconnect()
@@ -17,14 +25,14 @@ function NFTDropPage() {
             <div className="bg-gradient-to-br from-yellow-400 to-purple-600 rounded-xl p-2">
                 <img
                 className="w-44 object-cover rounded-xl lg:h-96 lg:w-72" 
-                src="https://links.papareact.com/8sg"
+                src={urlFor(collection.previewImage).url()}
                 alt="la la la"
                 />
             </div>
 
             <div className="text-center space-y-2 p-5">
-              <h1 className="text-4xl font-bold text-white"> PAPAFAAM</h1>
-              <h2 className="text-xl text-gray-300 ">Lorem ipsum dolor sit amet consectetur adipisicing.</h2>
+              <h1 className="text-4xl font-bold text-white"> {collection.nftCollectionName}</h1>
+              <h2 className="text-xl text-gray-300 ">{collection.description}</h2>
 
             </div>
            
@@ -34,7 +42,9 @@ function NFTDropPage() {
         <div className='flex flex-col p-12 col-span-6'>
           {/* Header */}
           <header className="flex justify-between item-center">
+            <Link href="/">
             <h1 className='w-52 cursor-pointer text-xl font-extralight sm:w-80'>The{' '}<span className='font-bold underline decoration-pink-600/50'>PAPAFAM</span>{' '}NFT MARKET PLACE</h1>
+            </Link>
             <button
             onClick={()=> address ? disconnect() : connectWithMetamask()}
             className="bg-rose-400 text-white rounded-full px-4 py-2 text-xs font-semibold
@@ -49,10 +59,10 @@ function NFTDropPage() {
           <div className="mt-10 flex flex-1 flex-col  items-center space-y-6 lg:space-y-0 lg:justify-center text-center">
             <img
                   className="rounded-md w-80 object-cover lg:h-40 pb-10" 
-                  src="https://links.papareact.com/bdy"
+                  src={urlFor(collection.mainImage).url()}
                   alt="la la la"
                   />
-                  <h1 className=' text-3xl font-bold lg:text-4xl lg:font-extrabold'> The PAPAFAM Ape Coding Club | NFT Drop</h1>
+                  <h1 className=' text-3xl font-bold lg:text-4xl lg:font-extrabold'> {collection.title}</h1>
 
                   <p className='pt-2 text-xl text-green-400'>13 / 21 NFT's claimed</p>
           </div>
@@ -70,3 +80,52 @@ function NFTDropPage() {
 }
 
 export default NFTDropPage
+
+
+export const getServerSideProps: GetServerSideProps = async ({params}) =>{
+  const query = `
+  *[_type == "collection" && slug.current==$id][0]{
+    _id,
+    title,
+    address,
+    description,
+    nftCollectionName,
+    mainImage{
+    asset
+  },
+   previewImage{
+     asset
+   },
+    slug{
+      current
+    },
+    creator ->{
+      _id,
+      name,
+      address,
+      slug{
+      current
+    },
+     bio,
+     image{
+       asset
+     },
+  
+    }
+  }
+  ` 
+  const collection = await sanityClient.fetch(query,{
+    id:params?.id
+  })
+    
+  if(!collection){
+    return {
+      notFound:true
+    }
+  }
+  return{
+    props:{
+      collection,
+    }
+  }
+}

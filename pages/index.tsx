@@ -1,20 +1,52 @@
-import type { NextPage } from 'next'
+import type { GetServerSideProps, NextPage } from 'next'
 import Head from 'next/head'
 import Image from 'next/image'
+import Link from 'next/link'
+import {sanityClient, urlFor} from "../sanity"
+import { Collection } from '../typing'
 
-const Home: NextPage = () => {
+interface Props {
+  collections:Collection[],
+
+}
+
+const Home = ({collections}:Props) => {
+
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-2">
+    <div className="mx-auto max-w-7xl flex flex-col min-h-screen py-20 px-10 2xl:px-0">
       <Head>
         <title>NFT DROP</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
+        <header>
+              <h1 className='mb-10 text-4xl font-extralight '>The{' '}<span className='font-bold underline decoration-pink-600/50'>PAPAFAM</span>{' '}NFT MARKET PLACE</h1>
+        </header>
+      <main className="bg-slate-100 p-10 shadow-xl shadow-rose-400/20"> 
+        <div className="grid space-x-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          {collections.map(collection => (
+          <Link href={`/nft/${collection.slug.current}`}>
 
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
+           <div className='flex flex-col items-center cursor-pointer transition-all duration-200 hover:scale-105'>
+            
+            <img className='h-96 w-60 rounded-2xl object-cover' 
+            src={urlFor(collection.mainImage).url()} alt={collection.creator.name}/>
+            
+            <div className="p-5">
+               <h2 className="text-3xl">{collection.title}</h2>
+               <p className='mt-2 text-sm text-gray-400'>{collection.description}</p>
+            </div>
+           </div>
+           </Link>
+
+           ))} 
+
+        </div>
+      
         
       </main>
 
-      <footer className="flex h-24 w-full items-center justify-center border-t">
+      <footer>
        
       </footer>
     </div>
@@ -22,3 +54,45 @@ const Home: NextPage = () => {
 }
 
 export default Home
+
+
+export const getServerSideProps: GetServerSideProps = async () =>{
+  const query = `
+  *[_type == "collection"]{
+    _id,
+    title,
+    address,
+    description,
+    nftCollectionName,
+    mainImage{
+    asset
+  },
+   previewImage{
+     asset
+   },
+    slug{
+      current
+    },
+    creator ->{
+      _id,
+      name,
+      address,
+      slug{
+      current
+    },
+     bio,
+     image{
+       asset
+     },
+  
+    }
+  }
+  ` 
+  const collections = await sanityClient.fetch(query)
+    
+  return {
+    props:{
+      collections
+    }
+  }
+}
